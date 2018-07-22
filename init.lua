@@ -28,6 +28,11 @@ Licenced under the MIT licence. See LICENCE for more information.
     speed of attack
     power of attack
     range
+    duration
+    random
+    hp
+    tick
+    coordinates
 ]]
 --[[
   rank:
@@ -79,19 +84,19 @@ local rank_level = {
 }
 local rank_settings = {}
 rank_settings['Fire'] = {}
-rank_settings['Fire']['regeneration'] = 2
-rank_settings['Fire']['max_mana'] = 80
+rank_settings['Fire']['regeneration'] = 1
+rank_settings['Fire']['max_mana'] = 84
 rank_settings['Ice'] = {}
-rank_settings['Ice']['regeneration'] = 4
-rank_settings['Ice']['max_mana'] = 84
+rank_settings['Ice']['regeneration'] = 2
+rank_settings['Ice']['max_mana'] = 88
 rank_settings['Lightning'] = {}
-rank_settings['Lightning']['regeneration'] = 6
-rank_settings['Lightning']['max_mana'] = 88
+rank_settings['Lightning']['regeneration'] = 4
+rank_settings['Lightning']['max_mana'] = 92
 rank_settings['Motion'] = {}
 rank_settings['Motion']['regeneration'] = 8
-rank_settings['Motion']['max_mana'] = 92
+rank_settings['Motion']['max_mana'] = 96
 rank_settings['Nature'] = {}
-rank_settings['Nature']['regeneration'] = 10
+rank_settings['Nature']['regeneration'] = 16
 rank_settings['Nature']['max_mana'] = 100
 
 local attack_properties = {}
@@ -101,9 +106,10 @@ attack_properties['power'] = 1
 attack_properties['range'] = 1
 
 local motion_properties = {}
-motion_properties['speed'] = 1
 motion_properties['duration'] = 1
 motion_properties['range'] = 1
+motion_properties['speed'] = 1 -- fast or slow
+motion_properties['coordinates'] = 1 -- relative coordinates
 
 local inspection_properties = {}
 inspection_properties['cast_speed'] = 1
@@ -404,7 +410,7 @@ core.register_entity('magic:ball', {
       self.object:remove()
       return
     end
-    local objects = core.get_objects_inside_radius(pos, 1)
+    local objects = core.get_objects_inside_radius(pos, 1.5)
     local object
     if #objects > 1 then
       for _, obj in pairs(objects) do
