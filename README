@@ -8,3 +8,24 @@ Warning: this is a work in progress, there might be some changes in future
 This mod adds some magics
 
 The license of the texture is in: textures_LICENSE
+
+Example of spells:
+- spell for rank for player sam:
+	rank
+	00000000:q:sam:Lightning:9223372040358808912
+
+- spell to attack:
+	attack
+	0000:q:cast_speed:Fire:107810
+	0000:q:speed:Fire:76391
+	0000:q:power:Fire:76289
+	0000:q:range:Fire:85784
+
+It is possible to lower the strength by removing some zeros like:
+	0:q:cast_speed:Fire:107810
+
+The spell is valid if the hash begins with the desired number of zeros
+	core.sha1('qspeedFire76391') == 0000db7078e166d6f700c5ca835ef6771249325e
+
+The player has to find a nonce to have a working spell.
+

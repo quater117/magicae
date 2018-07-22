@@ -28,6 +28,11 @@ Licenced under the MIT licence. See LICENCE for more information.
     speed of attack
     power of attack
     range
+    duration
+    random
+    hp
+    tick
+    coordinates
 ]]
 --[[
   rank:
@@ -43,6 +48,7 @@ Licenced under the MIT licence. See LICENCE for more information.
   share encrypted book (known issue: memory)
   revoke encrypted spell
   hdbars: not tested
+  statistics command: how many mage of rank X exists ?
 ]]
 
 magic = {}
@@ -79,19 +85,19 @@ local rank_level = {
 }
 local rank_settings = {}
 rank_settings['Fire'] = {}
-rank_settings['Fire']['regeneration'] = 2
-rank_settings['Fire']['max_mana'] = 80
+rank_settings['Fire']['regeneration'] = 1
+rank_settings['Fire']['max_mana'] = 84
 rank_settings['Ice'] = {}
-rank_settings['Ice']['regeneration'] = 4
-rank_settings['Ice']['max_mana'] = 84
+rank_settings['Ice']['regeneration'] = 2
+rank_settings['Ice']['max_mana'] = 88
 rank_settings['Lightning'] = {}
-rank_settings['Lightning']['regeneration'] = 6
-rank_settings['Lightning']['max_mana'] = 88
+rank_settings['Lightning']['regeneration'] = 4
+rank_settings['Lightning']['max_mana'] = 92
 rank_settings['Motion'] = {}
 rank_settings['Motion']['regeneration'] = 8
-rank_settings['Motion']['max_mana'] = 92
+rank_settings['Motion']['max_mana'] = 96
 rank_settings['Nature'] = {}
-rank_settings['Nature']['regeneration'] = 10
+rank_settings['Nature']['regeneration'] = 16
 rank_settings['Nature']['max_mana'] = 100
 
 local attack_properties = {}
@@ -101,9 +107,10 @@ attack_properties['power'] = 1
 attack_properties['range'] = 1
 
 local motion_properties = {}
-motion_properties['speed'] = 1
 motion_properties['duration'] = 1
 motion_properties['range'] = 1
+motion_properties['speed'] = 1 -- fast or slow
+motion_properties['coordinates'] = 1 -- relative coordinates
 
 local inspection_properties = {}
 inspection_properties['cast_speed'] = 1
@@ -148,8 +155,38 @@ local cast_spell = function(itemstack, user, at)
   end
 end
 
+local spell_cast_speed = function(x)
+  return math.max(8 / x - 1, 0)
+end
+
+local spell_power = function(x, n)
+  return (19 - 2 * n) / 14 * (x - 1) + 1 / 2
+end
+
+local spell_range = function(x, n)
+  return (9 - n) * (x - 1) + 10
+end
+
+local spell_attack_speed = function(x, n)
+  return 2 * (10 - n) / 7 * (x - 1) + 1
+end
+
+local spell_duration = function(x, n)
+  return (53 - 2 * n) / 7 * (x - 1) + 7
+end
+
+local spell_coordinates = function(x, n)
+  return (1 - n / 6) * math.pow(2, x)
+end
+
+--[[
+local spell_random = function(x, n)
+  return 
+end
+-- ]]
+
 save_to_disk = function()
-  local file_path = core.get_worldpath() .. '/magic.mt'
+  local file_path = core.get_worldpath() .. '/magicae.mt'
   local file = io.open(file_path, 'w')
   local str = core.serialize(magic.players)
   if file then
@@ -161,7 +198,7 @@ save_to_disk = function()
 end
 
 read_disk = function()
-  local file_path = core.get_worldpath() .. '/magic.mt'
+  local file_path = core.get_worldpath() .. '/magicae.mt'
   local file = io.open(file_path, 'r')
   if file then
     local players = core.deserialize(file:read() or '')
@@ -205,9 +242,11 @@ end
 
 attack = function(user, lines)
   local name = user:get_player_name()
+  local player_rank
   if not magic.players[name].has_magic then
     return
   end
+  player_rank = rank[magic.players[name].rank]
   core.chat_send_player(name, 'Attack')
   local properties = {}
   for i = 2, 5 do
@@ -226,14 +265,13 @@ attack = function(user, lines)
   for k, v in pairs(properties) do
     sum = sum + v
     if k == 'cast_speed' then
-      cast_speed = 8 / v - 1
-      cast_speed = math.max(8 / v - 1, 0)
+      cast_speed = spell_cast_speed(v, player_rank)
     elseif k == 'speed' then
-      speed = v
+      speed = spell_attack_speed(v, player_rank)
     elseif k == 'power' then
-      power = 15 / 14 * (v - 1) + 1 / 2
+      power = spell_power(v, player_rank)
     elseif k == 'range' then
-      range = 15 * (v - 1) + 10
+      range = spell_range(v, player_rank)
     end
   end
   local mana = magic.players[user:get_player_name()].mana
@@ -254,7 +292,7 @@ attack = function(user, lines)
     pos.y = pos.y + u.y * 0.5
     pos.z = pos.z + u.z * 0.5
     -- ]]
-    local obj = core.add_entity(pos, 'magic:ball')
+    local obj = core.add_entity(pos, 'magicae:ball')
     obj:setvelocity(u)
     local lua_entity = obj:get_luaentity()
     lua_entity.radius = range
@@ -272,7 +310,7 @@ attack = function(user, lines)
       pos.y = pos.y + u.y * 0.5
       pos.z = pos.z + u.z * 0.5
       -- ]]
-      local obj = core.add_entity(pos, 'magic:ball')
+      local obj = core.add_entity(pos, 'magicae:ball')
       obj:setvelocity(u)
       local lua_entity = obj:get_luaentity()
       lua_entity.radius = range
@@ -353,7 +391,7 @@ core.override_item('default:book_written', {
   on_secondary_use = cast_spell,
 })
 
-core.register_entity('magic:ball', {
+core.register_entity('magicae:ball', {
   --radius = 5,
   --damage = 5,
   --origin = { x = 0, y = 0, z = 0 },
@@ -404,7 +442,7 @@ core.register_entity('magic:ball', {
       self.object:remove()
       return
     end
-    local objects = core.get_objects_inside_radius(pos, 1)
+    local objects = core.get_objects_inside_radius(pos, 1.5)
     local object
     if #objects > 1 then
       for _, obj in pairs(objects) do
@@ -491,6 +529,16 @@ core.register_chatcommand('rank', {
   description = 'Describe your magic rank',
   func = function(name)
     core.chat_send_player(name, 'Your rank: ' .. magic.players[name].rank)
+    return true
+  end
+})
+
+core.register_chatcommand('local_constants', {
+  description = 'Describe the world constants',
+  func = function(name)
+    core.chat_send_player(name, 'World: ' .. world)
+    core.chat_send_player(name, 'Seed: ' .. seed)
+    core.chat_send_player(name, 'Hash: ' .. hash_name)
     return true
   end
 })
